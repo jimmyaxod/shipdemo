@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ship mapping</title>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?callback=initMap&libraries=&v=weekly"
+      defer></script>
+
+<script>
+
+var ships = {}		// ID->{marker}
+
+var icon
+
+function dismiss() {
+	dd = document.getElementById("details")
+			dd.style.visibility = "hidden"
+
+}
+
+// Converts from degrees to radians.
+function toRadians(degrees) {
+  return degrees * Math.PI / 180;
+};
+ 
+// Converts from radians to degrees.
+function toDegrees(radians) {
+  return radians * 180 / Math.PI;
+}
+
+
+function bearing(startLat, startLng, destLat, destLng){
+  startLat = toRadians(startLat);
+  startLng = toRadians(startLng);
+  destLat = toRadians(destLat);
+  destLng = toRadians(destLng);
+
+  y = Math.sin(destLng - startLng) * Math.cos(destLat);
+  x = Math.cos(startLat) * Math.sin(destLat) -
+        Math.sin(startLat) * Math.cos(destLat) * Math.cos(destLng - startLng);
+  brng = Math.atan2(y, x);
+  brng = toDegrees(brng);
+  return (brng + 360) % 360;
+}
+
+
+function initMap() {
+
+icon = {
+path: "M47 49c-.952 0-1.884-.22-2.705-.597-.843-.397-1.795-.63-2.794-.63-.986 0-1.938.232-2.781.63-.834.377-1.756.597-2.718.597-.954 0-1.884-.22-2.708-.597-.841-.397-1.795-.63-2.792-.63-.987 0-1.939.232-2.785.63-.828.377-1.754.597-2.712.597-.964 0-1.884-.22-2.712-.597-.843-.397-1.797-.63-2.787-.63-.997 0-1.951.232-2.794.63-.823.377-1.748.597-2.713.597-.958 0-1.884-.22-2.71-.597-.844-.397-1.797-.63-2.789-.63-.992 0-1.945.232-2.789.63-.827.377-1.747.597-2.711.597v-4.102c.964 0 1.884-.22 2.711-.597.844-.387 1.797-.619 2.789-.619.991 0 1.944.232 2.789.619.827.377 1.752.597 2.71.597.965 0 1.89-.22 2.712-.597.843-.387 1.797-.619 2.794-.619.99 0 1.944.232 2.787.619.829.377 1.748.597 2.712.597.958 0 1.884-.22 2.712-.597.846-.387 1.798-.619 2.785-.619.997 0 1.951.232 2.792.619.824.377 1.754.597 2.708.597.962 0 1.884-.22 2.718-.597.843-.387 1.795-.619 2.781-.619.999 0 1.951.232 2.794.619.821.377 1.753.597 2.705.597v4.102zm-18-48v31h-24.713zm3 7.119c0 3.461 15.847 12.881 14.693 23.881h-14.693v-23.881zm11.527 25.881h-33.527v6.2c1 .1.846.211 1.187.377.827.365 1.804.585 2.762.585.965 0 1.916-.22 2.738-.585.843-.398 1.81-.63 2.807-.63.99 0 1.95.231 2.793.63.829.365 1.751.585 2.715.585.958 0 1.885-.22 2.713-.585.846-.398 1.799-.63 2.786-.63.997 0 1.952.231 2.793.63.824.365 1.754.585 2.708.585.187 0 .36-.044.536-.066l.045.022.328-.055c.219-.033.437-.056.657-.11 1.97-.409 3.244-2.006 3.244-2.006l3.835-4.947h-1.12z",
+fillColor: '#444444',
+fillOpacity: .6,
+anchor: new google.maps.Point(0,0),
+strokeWeight: 0,
+scale: 0.5
+}
+
+icon_moved = {
+path: "M47 49c-.952 0-1.884-.22-2.705-.597-.843-.397-1.795-.63-2.794-.63-.986 0-1.938.232-2.781.63-.834.377-1.756.597-2.718.597-.954 0-1.884-.22-2.708-.597-.841-.397-1.795-.63-2.792-.63-.987 0-1.939.232-2.785.63-.828.377-1.754.597-2.712.597-.964 0-1.884-.22-2.712-.597-.843-.397-1.797-.63-2.787-.63-.997 0-1.951.232-2.794.63-.823.377-1.748.597-2.713.597-.958 0-1.884-.22-2.71-.597-.844-.397-1.797-.63-2.789-.63-.992 0-1.945.232-2.789.63-.827.377-1.747.597-2.711.597v-4.102c.964 0 1.884-.22 2.711-.597.844-.387 1.797-.619 2.789-.619.991 0 1.944.232 2.789.619.827.377 1.752.597 2.71.597.965 0 1.89-.22 2.712-.597.843-.387 1.797-.619 2.794-.619.99 0 1.944.232 2.787.619.829.377 1.748.597 2.712.597.958 0 1.884-.22 2.712-.597.846-.387 1.798-.619 2.785-.619.997 0 1.951.232 2.792.619.824.377 1.754.597 2.708.597.962 0 1.884-.22 2.718-.597.843-.387 1.795-.619 2.781-.619.999 0 1.951.232 2.794.619.821.377 1.753.597 2.705.597v4.102zm-18-48v31h-24.713zm3 7.119c0 3.461 15.847 12.881 14.693 23.881h-14.693v-23.881zm11.527 25.881h-33.527v6.2c1 .1.846.211 1.187.377.827.365 1.804.585 2.762.585.965 0 1.916-.22 2.738-.585.843-.398 1.81-.63 2.807-.63.99 0 1.95.231 2.793.63.829.365 1.751.585 2.715.585.958 0 1.885-.22 2.713-.585.846-.398 1.799-.63 2.786-.63.997 0 1.952.231 2.793.63.824.365 1.754.585 2.708.585.187 0 .36-.044.536-.066l.045.022.328-.055c.219-.033.437-.056.657-.11 1.97-.409 3.244-2.006 3.244-2.006l3.835-4.947h-1.12z",
+fillColor: '#884444',
+fillOpacity: .6,
+anchor: new google.maps.Point(0,0),
+strokeWeight: 0,
+scale: 0.6
+}
+
+iconi = 0
+icons = ["sh1.png", "sh2.png", "sh3.png", "sh5.png"]
+
+	// First lets setup the map
+	const map = new google.maps.Map(document.getElementById("map"), {
+		zoom: 4.5,
+		center: { lat: 32.1611451, lng: -102.6034625 },
+		mapTypeId: "roadmap",
+	});
+
+	// Now listen on a websocket for events...
+
+	socket = new WebSocket("ws://localhost:3000/ws")
+
+	// Connection opened
+	socket.addEventListener('open', function (event) {
+		socket.send('Hello Server!');
+	});
+
+	// Listen for messages
+	socket.addEventListener('message', function (event) {
+
+
+		// Do an update...
+		bits = event.data.split(",")
+		// ID lat lon
+		id = bits[0]
+		lat = bits[1]
+		lon = bits[2]
+
+		status = bits[3]
+
+		// Update status
+
+		document.getElementById("status").innerHTML = status
+
+		console.log('Message from server ', event.data);
+
+		ids = id.split(" ")
+		shipid = ids[0]
+		did = ids[1]
+
+		if (typeof(ships[id])=='undefined') {
+			console.log("NEW SHIP! " + id + " " + iconi)
+
+			var marker = new google.maps.Marker({
+				map: map,
+				position: new google.maps.LatLng(lat, lon),
+				title: "Ship " + id,
+				label: {text:did, fontFamily:"monospace", fontSize:"8px", color:"#ff4444"},
+				icon: {url:icons[iconi], labelOrigin:new google.maps.Point(0,44)}
+			});
+			ships[id] = marker
+
+			marker.addListener("click", function(mydid) {
+				return function() {
+				// Ask for a describe...
+				socket.send("DESCRIBE " + did)
+				}
+			}(did));
+
+
+			// Add it to the list...
+			html = document.getElementById("shipdetails").innerHTML
+			html = html + "<img width='32' height='20' src='" + icons[iconi] + "'> "
+			html = html + " <img id='compass_" + shipid + "' width='20' height='20' src='/up.png'> "
+			+"<span style='font-family:monospace;font-size:8px;color:#444' id='shipidi_" + shipid + "'>" + did + "</span> <span style='font-family:monospace;font-size:8px;color:#008'>" + shipid + "</span><br>"
+			document.getElementById("shipdetails").innerHTML = html
+
+			iconi = (iconi+1) % icons.length
+		} else {
+			marker = ships[id]
+			var latlng = new google.maps.LatLng(lat, lon);
+			
+			deg = bearing(marker.getPosition().lat(), marker.getPosition().lng(), lat, lon)
+
+
+			// Update the bearing signifier...
+			div = document.getElementById("compass_" + shipid)
+
+			div.style.webkitTransform = 'rotate('+deg+'deg)'; 
+			div.style.mozTransform    = 'rotate('+deg+'deg)'; 
+			div.style.msTransform     = 'rotate('+deg+'deg)'; 
+			div.style.oTransform      = 'rotate('+deg+'deg)'; 
+			div.style.transform       = 'rotate('+deg+'deg)'; 
+
+			marker.setPosition(latlng)
+			// Show it's moving...
+
+			marker.setLabel({text:did, fontFamily:"monospace", fontSize:"8px", color:"#ff4444"})
+			document.getElementById("shipidi_" + shipid).style.color = "#ff4444"
+			setTimeout(function(m, d, s) {
+				return function() {
+					m.setLabel({text:d, fontFamily:"monospace", fontSize:"8px", color:"#444444"})
+					document.getElementById("shipidi_" + s).style.color = "#444444"
+				}
+			}(marker, did, shipid), 200)
+		}
+	});
+
+	// Connection closed
+	socket.addEventListener('close', function (event) {
+		socket.send('Bye Server!');
+	});
+
+	/*
+	lat = 52.214016
+	lon = 0.964676
+
+		var marker = new google.maps.Marker({
+			map: map,
+			position: new google.maps.LatLng(lat, lon),
+			title: "Ship1"
+		});
+
+	setInterval(function() {
+		// Draw some bits...
+
+		lat += (Math.random() * .01) - .005
+		lon += (Math.random() * .01) - .005
+		var latlng = new google.maps.LatLng(lat, lon);
+		marker.setPosition(latlng)
+
+	}, 100)
+	*/
+}
+</script>
+
+<style>
+/* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+#map {
+  height: 100%;
+}
+
+/* Optional: Makes the sample page fill the window. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+</style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+	<div style="font-family:monospace; color:#444444 ;padding:8px;position:absolute;top:70px;left:10px;background-color:#dddddd;border:2px solid black;opacity:75%;border-radius:8px">
+		<span id="status">Loading . . .</span>
+		<hr>
+		<div id="shipdetails">
+		</div>
+	</div>
+
+	<div id="details" style="font-family:monospace; color:#444444 ;padding:8px;position:absolute;top:10px;left:400px;background-color:#dddddd;border:2px solid black;opacity:75%;border-radius:8px;visibility:hidden">
+	</div>
+
+  </body>
+</html>
